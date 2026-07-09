@@ -3,246 +3,163 @@ require("dotenv").config();
 const {
     Client,
     GatewayIntentBits,
+    Partials,
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    ChannelType,
-    PermissionsBitField
+    PermissionsBitField,
+    ChannelType
 } = require("discord.js");
 
+const QRCode = require("qrcode");
 
 const client = new Client({
-
-    intents:[
+    intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers
+    ],
+    partials: [
+        Partials.Channel
     ]
-
 });
 
 
+const prefix = "!";
+
+const joins = [];
+
+
+// ===============================
 // BOT ONLINE
+// ===============================
 
-client.once("ready",()=>{
+client.once("ready", () => {
+    console.log(`✅ Bot online como ${client.user.tag}`);
+});
 
-    console.log(`✅ Bot online: ${client.user.tag}`);
+
+// ===============================
+// LOG
+// ===============================
+
+async function enviarLog(guild, texto){
+
+    const canal = guild.channels.cache.get(
+        process.env.CANAL_LOG
+    );
+
+    if(!canal) return;
+
+    const embed = new EmbedBuilder()
+    .setTitle("📌 Log do Bot")
+    .setDescription(texto)
+    .setColor("Red")
+    .setTimestamp();
+
+    canal.send({
+        embeds:[embed]
+    });
+}
+
+
+// ===============================
+// ANTI RAID
+// ===============================
+
+client.on("guildMemberAdd", async(member)=>{
+
+    if(process.env.ANTI_RAID !== "true") return;
+
+
+    const agora = Date.now();
+
+    joins.push(agora);
+
+
+    while(
+        joins.length &&
+        agora - joins[0] > 10000
+    ){
+        joins.shift();
+    }
+
+
+    if(joins.length >= 5){
+
+        await enviarLog(
+            member.guild,
+            "🚨 Possível raid detectado! Muitas entradas em pouco tempo."
+        );
+
+
+        try{
+
+            await member.timeout(
+                600000,
+                "Proteção Anti Raid"
+            );
+
+        }catch(e){}
+
+    }
 
 });
 
 
+// ===============================
+// CRIAR PAINEL DE TICKET
+// ===============================
 
+client.on("messageCreate", async(message)=>{
 
-// COMANDOS
 
-client.on("messageCreate", async message => {
+if(message.author.bot) return;
 
 
-    if(message.author.bot) return;
 
+if(message.content === "!ticket"){
 
 
-    // CRIAR PAINEL DE TICKET
+const embed = new EmbedBuilder()
 
-    if(message.content === "!ticket"){
+.setTitle("🎫 Suporte / Compra")
 
+.setDescription(
+" clique no botão abaixo para abrir um ticket de compra."
+)
 
-        const embed = new EmbedBuilder()
+.setColor("Black");
 
-        .setTitle("🛒 Loja - Atendimento")
 
-        .setDescription(
-            "Clique no botão abaixo para abrir um ticket de compra.\n\n"+
-            "Um vendedor irá atender você."
-        )
 
-        .setColor("Blue");
+const button = new ButtonBuilder()
 
+.setCustomId("abrir_ticket")
 
+.setLabel("Abrir Ticket")
 
-        const button = new ButtonBuilder()
+.setStyle(ButtonStyle.Success);
 
-        .setCustomId("abrir_ticket")
 
-        .setLabel("🎫 Abrir Ticket")
 
-        .setStyle(ButtonStyle.Primary);
+const row = new ActionRowBuilder()
+.addComponents(button);
 
 
 
-        const row = new ActionRowBuilder()
+message.channel.send({
 
-        .addComponents(button);
+embeds:[embed],
 
+components:[row]
 
+});
 
-        message.channel.send({
 
-            embeds:[embed],
-
-            components:[row]
-
-        });
-
-
-    }
-
-
-
-
-
-    // PIX
-
-
-    if(message.content === "!pix"){
-
-
-        const embed = new EmbedBuilder()
-
-        .setTitle("💰 Pagamento PIX")
-
-        .setDescription(
-            `Chave PIX:\n\n`+
-            `\`${process.env.PIX}\`\n\n`+
-            `Envie o comprovante neste ticket.`
-        )
-
-        .setColor("Green")
-
-        .setImage("attachment://qr.png");
-
-
-
-        message.channel.send({
-
-            embeds:[embed],
-
-            files:["qr.png"]
-
-        });
-
-
-    }
-
-
-
-
-
-
-    // CONFIRMAR COMPRA
-
-
-    if(message.content === "!confirmar"){
-
-
-
-        if(!message.member.roles.cache.has(process.env.CARGO_VENDEDOR)){
-
-
-            return message.reply(
-                "❌ Você não tem permissão para confirmar compras."
-            );
-
-
-        }
-
-
-
-        if(!message.channel.name.startsWith("ticket-")){
-
-
-            return message.reply(
-                "❌ Use esse comando dentro de um ticket."
-            );
-
-
-        }
-
-
-
-        const embed = new EmbedBuilder()
-
-        .setTitle("✅ Compra Confirmada")
-
-        .setDescription(
-
-            `Pagamento confirmado!\n\n`+
-            `Vendedor: ${message.author}\n\n`+
-            `Obrigado pela compra.`
-
-        )
-
-        .setColor("Green")
-
-        .setTimestamp();
-
-
-
-        message.channel.send({
-
-            embeds:[embed]
-
-        });
-
-
-
-
-        const logs = client.channels.cache.get(
-            process.env.CANAL_LOG
-        );
-
-
-        if(logs){
-
-
-            logs.send(
-
-                `💰 **Venda Confirmada**\n\n`+
-
-                `👤 Vendedor: ${message.author}\n`+
-
-                `🎫 Ticket: ${message.channel}`
-
-            );
-
-
-        }
-
-
-
-    }
-
-
-
-
-
-
-
-    // FECHAR TICKET
-
-
-    if(message.content === "!fechar"){
-
-
-
-        if(!message.channel.name.startsWith("ticket-")) return;
-
-
-
-        message.reply(
-            "🔒 Ticket fechado."
-        );
-
-
-        setTimeout(()=>{
-
-            message.channel.delete();
-
-        },3000);
-
-
-    }
+}
 
 
 
@@ -250,133 +167,122 @@ client.on("messageCreate", async message => {
 
 
 
+// ===============================
+// BOTÕES
+// ===============================
 
 
+client.on("interactionCreate", async(interaction)=>{
 
 
+if(!interaction.isButton()) return;
 
 
-// BOTÃO DO TICKET
 
+if(interaction.customId === "abrir_ticket"){
 
-client.on("interactionCreate", async interaction => {
 
 
+const canal = await interaction.guild.channels.create({
 
-    if(!interaction.isButton()) return;
+name:`ticket-${interaction.user.username}`,
 
+type:ChannelType.GuildText,
 
 
-    if(interaction.customId === "abrir_ticket"){
+permissionOverwrites:[
 
+{
+id:interaction.guild.id,
 
+deny:[
+PermissionsBitField.Flags.ViewChannel
+]
 
-        const existe = interaction.guild.channels.cache.find(
+},
 
-            c => c.name === `ticket-${interaction.user.username}`
+{
+id:interaction.user.id,
 
-        );
+allow:[
+PermissionsBitField.Flags.ViewChannel,
+PermissionsBitField.Flags.SendMessages
+]
 
+}
 
+]
 
-        if(existe){
 
+});
 
-            return interaction.reply({
 
-                content:"❌ Você já possui um ticket aberto.",
 
-                ephemeral:true
+const qr = await QRCode.toDataURL(
+process.env.CHAVE_PIX
+);
 
-            });
 
 
-        }
+const embed = new EmbedBuilder()
 
+.setTitle("🛒 Compra")
 
+.setDescription(
 
+`Olá ${interaction.user}!
 
+Envie o comprovante após o pagamento.
 
-        const canal = await interaction.guild.channels.create({
+💰 PIX:
 
+\`${process.env.CHAVE_PIX}\`
 
-            name:`ticket-${interaction.user.username}`,
+Use o QR Code abaixo.`
 
+)
 
-            type:ChannelType.GuildText,
+.setColor("Green")
 
+.setImage("attachment://pix.png");
 
 
-            permissionOverwrites:[
 
+canal.send({
 
-                {
+embeds:[embed],
 
+files:[
 
-                    id:interaction.guild.id,
+{
 
+attachment:
+Buffer.from(
+qr.split(",")[1],
+"base64"
+),
 
-                    deny:[
+name:"pix.png"
 
-                        PermissionsBitField.Flags.ViewChannel
+}
 
-                    ]
+]
 
-                },
 
+});
 
-                {
 
 
-                    id:interaction.user.id,
+interaction.reply({
 
+content:`Ticket criado: ${canal}`,
 
-                    allow:[
+ephemeral:true
 
-                        PermissionsBitField.Flags.ViewChannel,
+});
 
-                        PermissionsBitField.Flags.SendMessages
 
-                    ]
-
-                }
-
-
-            ]
-
-
-
-        });
-
-
-
-
-        canal.send(
-
-            `🎫 Olá ${interaction.user}!\n\n`+
-
-            `Envie o que deseja comprar.\n\n`+
-
-            `Use \`!pix\` para receber o pagamento.\n`+
-
-            `Após pagar envie o comprovante.`
-
-        );
-
-
-
-        interaction.reply({
-
-            content:`✅ Ticket criado: ${canal}`,
-
-            ephemeral:true
-
-        });
-
-
-
-    }
-
+}
 
 
 });
@@ -384,6 +290,129 @@ client.on("interactionCreate", async interaction => {
 
 
 
+// ===============================
+// CONFIRMAR PAGAMENTO
+// ===============================
 
 
-client.login(process.env.TOKEN);
+client.on("messageCreate", async(message)=>{
+
+
+if(message.author.bot) return;
+
+
+if(message.content === "!confirmar"){
+
+
+
+if(
+!message.member.roles.cache.has(
+process.env.CARGO_ADMIN
+)
+
+){
+
+return message.reply(
+"❌ Você não tem permissão."
+);
+
+}
+
+
+
+message.channel.send(
+"✅ Pagamento confirmado!"
+);
+
+
+await enviarLog(
+message.guild,
+`${message.author} confirmou uma compra em ${message.channel}`
+);
+
+
+}
+
+
+
+});
+
+
+
+// ===============================
+// COMANDOS STAFF
+// ===============================
+
+
+client.on("messageCreate", async(message)=>{
+
+
+if(message.author.bot) return;
+
+
+if(!message.content.startsWith(prefix))
+return;
+
+
+
+if(
+!message.member.roles.cache.has(
+process.env.CARGO_ADMIN
+)
+
+) return;
+
+
+
+const args = message.content.slice(1).split(" ");
+
+const cmd=args.shift();
+
+
+
+if(cmd==="lock"){
+
+
+message.channel.permissionOverwrites.edit(
+
+message.guild.id,
+
+{
+SendMessages:false
+}
+
+);
+
+
+message.reply("🔒 Canal bloqueado.");
+
+}
+
+
+
+if(cmd==="unlock"){
+
+
+message.channel.permissionOverwrites.edit(
+
+message.guild.id,
+
+{
+SendMessages:true
+}
+
+);
+
+
+message.reply("🔓 Canal liberado.");
+
+}
+
+
+});
+
+
+
+client.login(
+process.env.TOKEN
+);
