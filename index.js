@@ -290,62 +290,21 @@ client.on("interactionCreate", async(interaction)=>{
             categoria.id,
 
 
-            permissionOverwrites:[
-
-
-                {
-
-                    id:
-                    interaction.guild.id,
-
-
-                    deny:[
-
-                        PermissionsBitField.Flags.ViewChannel
-
-                    ]
-
-                },
-
-
-                {
-
-                    id:
-                    interaction.user.id,
-
-
-                    allow:[
-
-                        PermissionsBitField.Flags.ViewChannel,
-
-                        PermissionsBitField.Flags.SendMessages
-
-                    ]
-
-                },
-
-
-                {
-
-                    id:
-                    process.env.CARGO_ADMIN,
-
-
-                    allow:[
-
-                        PermissionsBitField.Flags.ViewChannel,
-
-                        PermissionsBitField.Flags.SendMessages
-
-                    ]
-
-                }
-
-
-            ]
-
-
-        });
+           permissionOverwrites: [
+    {
+        id: interaction.guild.id,
+        deny: [
+            PermissionsBitField.Flags.ViewChannel
+        ]
+    },
+    {
+        id: interaction.user.id,
+        allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages
+        ]
+    }
+]
 
 
 
