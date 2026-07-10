@@ -56,7 +56,7 @@ async function enviarLog(guild, texto){
     const embed = new EmbedBuilder()
     .setTitle("📌 Log do Bot")
     .setDescription(texto)
-    .setColor("Red")
+    .setColor("#FF0000")
     .setTimestamp();
 
     canal.send({
@@ -131,7 +131,7 @@ const embed = new EmbedBuilder()
 " clique no botão abaixo para abrir um ticket de compra."
 )
 
-.setColor("Black");
+.setColor("#000000")
 
 
 
@@ -242,7 +242,7 @@ Use o QR Code abaixo.`
 
 )
 
-.setColor("Green")
+.setColor("#00FF00")
 
 .setImage("attachment://pix.png");
 
