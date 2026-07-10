@@ -278,48 +278,43 @@ client.on("interactionCreate", async(interaction)=>{
 
 
         const canal =
-        await interaction.guild.channels.create({
+await interaction.guild.channels.create({
+
+    name: `ticket-${interaction.user.username}`,
+
+    type: ChannelType.GuildText,
+
+    parent: categoria.id,
+
+    permissionOverwrites: [
+        {
+            id: interaction.guild.id,
+            deny: [
+                PermissionsBitField.Flags.ViewChannel
+            ]
+        },
+        {
+            id: interaction.user.id,
+            allow: [
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages
+            ]
+        }
+    ]
+
+});
 
 
-            name:`ticket-${interaction.user.username}`,
-
-            type:ChannelType.GuildText,
-
-
-            parent:
-            categoria.id,
+tickets.set(
+    interaction.user.id,
+    canal.id
+);
 
 
-           permissionOverwrites: [
-    {
-        id: interaction.guild.id,
-        deny: [
-            PermissionsBitField.Flags.ViewChannel
-        ]
-    },
-    {
-        id: interaction.user.id,
-        allow: [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages
-        ]
-    }
-]
-
-
-
-        tickets.set(
-            interaction.user.id,
-            canal.id
-        );
-
-
-
-
-        const qr =
-        await QRCode.toBuffer(
-            process.env.CHAVE_PIX
-        );
+const qr =
+await QRCode.toBuffer(
+    process.env.CHAVE_PIX
+);
 
 
 
